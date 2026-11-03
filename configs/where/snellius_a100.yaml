@@ -1,0 +1,19 @@
+# Where: a full A100 40 GB on Snellius (partition gpu_a100, 18 cores per GPU). Picked by
+# `--where snellius_a100`, or automatically inside a gpu_a100 job. Every hour bills a GPU
+# share whether the GPU is busy or not, so this profile is about keeping it busy. A small
+# model on CIFAR-10 rarely fills an A100: if bench.py shows it idle, use gpu_mig instead.
+data:
+  # 18 cores per GPU share: 17 workers leave exactly one for the main process.
+  num_workers: 17
+  eval_num_workers: 4
+  prefetch_factor: 1
+  batch_size: 256
+  eval_batch_size: 2048
+train:
+  precision: bf16-mixed
+  matmul_precision: high
+  cudnn_benchmark: true
+  compile: true
+logging:
+  wandb_mode: offline
+  wandb_dir: ${oc.env:TMPDIR,/tmp}/wandb

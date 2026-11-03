@@ -1,0 +1,10 @@
+# Card 6: torch.compile recompiles whenever it sees a new input shape.
+# Reproduces: compile on, with a short last batch in training (45000 % 128 = 72) and in
+# validation (5000 % 768 = 392). Run with TORCH_LOGS=recompiles to see each one.
+# Fix: `data.drop_last=true` for training; for evaluation, accept one recompile or pad.
+train:
+  compile: true
+  max_epochs: 2
+data:
+  drop_last: false
+  eval_batch_size: 768

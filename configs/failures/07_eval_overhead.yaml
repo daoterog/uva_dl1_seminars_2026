@@ -1,0 +1,8 @@
+# Card 7: evaluation costs more than you think, and it runs on the training clock.
+# Reproduces: validating every epoch at a small batch with few workers.
+# Fix: validate on a cadence (`train.check_val_every_n_epoch`), at a large eval batch.
+train:
+  check_val_every_n_epoch: 1
+data:
+  eval_batch_size: 32
+  eval_num_workers: 0

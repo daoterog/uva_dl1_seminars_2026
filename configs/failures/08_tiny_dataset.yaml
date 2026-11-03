@@ -1,0 +1,10 @@
+# Card 8: on a tiny dataset an epoch is a few steps, and the fixed cost of every epoch
+# boundary (worker restart, hooks, validation) dominates the run.
+# Reproduces: 512 images at batch 128 is 4 steps per epoch, for 500 epochs.
+# Fix: `data.steps_per_epoch=200` (sampling with replacement) and fewer epochs.
+data:
+  subset: 512
+  persistent_workers: false
+train:
+  max_epochs: 500
+  check_val_every_n_epoch: 50

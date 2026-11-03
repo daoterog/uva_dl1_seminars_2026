@@ -1,0 +1,9 @@
+# Card 9: host RAM, not GPU memory, is what runs out: every worker is a copy of the main
+# process, and every prefetched batch is held in RAM.
+# Reproduces: many workers with a deep prefetch, and as many persistent eval workers.
+# Watch it with `free -g` locally, or `sstat -j <jobid> --format=MaxRSS` on Snellius.
+# Fix: prefetch_factor 1, few eval workers, and a --mem that budgets for all of it.
+data:
+  num_workers: 16
+  prefetch_factor: 8
+  eval_num_workers: 16

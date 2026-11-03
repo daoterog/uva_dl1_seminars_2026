@@ -1,0 +1,98 @@
+# What is trained: data, model, optimisation. Machine-dependent settings (workers,
+# precision, compile, batch size for a given GPU) belong to configs/where/, and are
+# set there rather than here, so that a cluster run never silently inherits a laptop
+# value. See seminar_1_tooling/README.md for the merge order.
+seed: 0
+
+data:
+  root: data/
+  # classic: torchvision transforms on PIL images in DataLoader workers (the usual way).
+  # gpu:     the whole dataset as uint8 on the GPU, augmented there in one batched op.
+  # png:     one PNG file per image (scripts/export_pngs.py), the small-files case.
+  pipeline: classic
+  png_root: data/cifar10_png
+  val_size: 5000
+  batch_size: 128
+  # null follows batch_size. Evaluation keeps no activations for backward, so it can
+  # usually run at several times the training batch.
+  eval_batch_size: null
+  augment: true
+  num_workers: 4
+  # Validation runs rarely; its workers stay alive between passes when persistent, and
+  # each one is a full copy of the main process.
+  eval_num_workers: 2
+  pin_memory: true
+  # Copy the next batch to the GPU on a side stream while the current one trains
+  # (dl1/prefetch.py). Pays off when batches are large; needs pin_memory. Single GPU only.
+  gpu_prefetch: false
+  persistent_workers: true
+  # Batches each worker keeps ready. Every one of them is held in host RAM.
+  prefetch_factor: 2
+  # A short last batch is a new input shape, and a compiled model recompiles for it.
+  drop_last: true
+  # Train on the first N images only (null: all). With few images an epoch is a handful
+  # of steps, and per-epoch overhead (worker restart, hooks, validation) dominates.
+  subset: null
+  # Fixed number of steps per epoch, sampling with replacement (null: one pass).
+  steps_per_epoch: null
+
+model:
+  # resnet18: CIFAR-style ResNet-18 (3x3 stem, no max-pool), ~11M parameters.
+  # mlp:      a small MLP, too little work per step to keep any GPU busy.
+  name: resnet18
+  num_classes: 10
+  mlp_hidden: [512, 512]
+
+optim:
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 5.0e-4
+  nesterov: true
+  label_smoothing: 0.0
+
+train:
+  max_epochs: 30
+  # Ends the run here without shrinking the LR schedule (null: run all epochs).
+  max_steps: null
+  check_val_every_n_epoch: 1
+  # Set per machine in configs/where/.
+  precision: 32-true
+  matmul_precision: highest
+  compile: false
+  # default | reduce-overhead (CUDA graphs) | max-autotune
+  compile_mode: default
+  cudnn_benchmark: false
+  deterministic: false
+  # null | simple | advanced | pytorch. `simple` prints time per Lightning hook at the end;
+  # `pytorch` writes a trace to open in https://ui.perfetto.dev. Both slow the run: use
+  # them on a short run (train.max_steps), never on a real one.
+  profiler: null
+
+metrics:
+  # Calibration bins for the expected calibration error at validation.
+  ece_bins: 15
+
+logging:
+  project: dl1-seminars
+  # online | offline | disabled. Compute nodes have no internet: use offline there and
+  # `wandb sync` the run directory from a login node afterwards.
+  wandb_mode: online
+  # null: wandb's default, ./wandb. On Snellius point it at scratch: home quota is small.
+  wandb_dir: null
+  group: null
+  tags: []
+  log_every_n_steps: 50
+  # Each progress-bar refresh turns the prog_bar metrics into Python numbers, which waits
+  # for the GPU to finish. Refreshing every step means a sync every step.
+  progress_every: 50
+  checkpoint_dir: checkpoints/
+
+# Knobs that reproduce a common mistake on purpose, for the cookbook (seminar_2_gpu/).
+# Never turn these on in real code; they exist so the cost can be measured.
+antipatterns:
+  # float(loss) every step: a host-device sync, the CPU waits for the GPU each step.
+  item_every_step: false
+  # Copy predictions to the CPU and score them with NumPy every training step.
+  cpu_metric_every_step: false
+  # `if not torch.isfinite(loss): ...` every step: a Python `if` on a GPU tensor syncs.
+  check_finite_every_step: false

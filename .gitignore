@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Seminar run outputs
+data/
+wandb/
+checkpoints/
+lightning_logs/
+slurm-*.out
+logs/

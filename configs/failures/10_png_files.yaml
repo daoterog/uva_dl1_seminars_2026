@@ -1,0 +1,7 @@
+# Card 10: reading one small file per sample from a network filesystem.
+# Reproduces: CIFAR-10 as 50,000 PNG files (write them first with scripts/export_pngs.py,
+# to the filesystem you want to test: home, scratch, $TMPDIR).
+# Fix: pack samples into a few large files, or copy the dataset to node-local disk at the
+# start of the job; and request enough --mem for the page cache to hold it.
+data:
+  pipeline: png

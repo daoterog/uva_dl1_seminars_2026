@@ -1,0 +1,28 @@
+# Where: one MIG slice of an A100 on Snellius (partition gpu_mig). A slice is a hardware
+# partition of the card, with its own share of the SMs and of the memory (~20 GB here),
+# and it comes with a share of the node's CPU cores. Picked by `--where snellius_mig`, or
+# automatically inside a gpu_mig job.
+#
+# Check the cores and memory a slice actually gets with `scontrol show partition gpu_mig`
+# before trusting the numbers below, and keep jobs/train_mig.sh in line with them.
+data:
+  # Cores per slice minus one for the main process. Assumed 9 cores per slice; set it to
+  # what `--cpus-per-task` gives you (Lightning warns when workers exceed the cores).
+  num_workers: 8
+  eval_num_workers: 2
+  # One ready batch per worker is enough to keep up; every extra one costs host RAM.
+  prefetch_factor: 1
+  # Under no_grad there are no activations to keep. Make sure it fits the slice, not a
+  # whole A100: a profile written for 40 GB will OOM on 20.
+  eval_batch_size: 1024
+train:
+  precision: bf16-mixed
+  # TF32 for whatever matmuls autocast leaves in fp32. Measure it: it is not always a win.
+  matmul_precision: high
+  cudnn_benchmark: true
+  compile: true
+logging:
+  # Compute nodes have no internet. `wandb sync` the run from a login node afterwards.
+  wandb_mode: offline
+  # Home is small; caches and run files go to scratch.
+  wandb_dir: ${oc.env:TMPDIR,/tmp}/wandb

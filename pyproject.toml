@@ -1,0 +1,103 @@
+[project]
+name = "uvadlc-seminars"
+version = "1.0.0"
+description = "DL1 seminars: training tooling and keeping the GPU busy."
+requires-python = ">=3.12,<3.14"
+# torch and torchvision are not listed here: they live in the `cuda` / `cpu`
+# dependency groups below, because the wheel index differs per machine.
+dependencies = [
+    "lightning>=2.6.6",
+    "omegaconf>=2.4.0",
+    "torchmetrics>=1.9.0",
+    "wandb>=0.31.0",
+]
+
+# ---------------------------------------------------------------------------
+# Torch build selection.
+#
+# `cuda` and `cpu` hold the same packages at the same versions; only the wheel
+# index differs. They are declared as conflicting groups, so uv locks both
+# resolutions in uv.lock and one is chosen at install time:
+#
+#   uv sync                             CUDA (cu128), the default
+#   uv sync --no-group cuda --group cpu CPU-only fallback
+#
+# There is no way to make that choice inside pyproject.toml: a lockfile is
+# hardware-agnostic and environment markers cannot see whether a GPU exists.
+# ---------------------------------------------------------------------------
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.15.22",
+]
+cuda = [
+    "torch==2.9.0",
+    "torchvision==0.24.0",
+]
+cpu = [
+    "torch==2.9.0",
+    "torchvision==0.24.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "cuda"]
+conflicts = [[{ group = "cuda" }, { group = "cpu" }]]
+# The PyTorch CPU index carries several win_arm64-only builds of torchvision
+# 0.24.0 with hash local versions (+e437e35 etc.) which sort ABOVE the real
+# +cpu build, so uv picks one and then cannot install on ordinary x86_64
+# Linux/Windows. Declaring the platforms we actually have to support forces uv
+# to resolve to a build that has wheels for them. Only Apple Silicon is listed
+# for macOS: PyTorch stopped shipping Intel Mac wheels after 2.2.
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+# On macOS the cuda/cpu choice is meaningless, so both groups resolve to the
+# same Mac build from PyPI. This keeps a bare `uv sync` working on a Mac.
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu128", group = "cuda", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cpu", group = "cpu", marker = "sys_platform != 'darwin'" },
+]
+torchvision = [
+    { index = "pytorch-cu128", group = "cuda", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cpu", group = "cpu", marker = "sys_platform != 'darwin'" },
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import order, UP modern syntax, B likely bugs,
+# SIM simplifications, D docstrings, ANN type hints.
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "D", "ANN"]
+ignore = [
+    "D203", # conflicts with D211 (no-blank-line-before-class)
+    "D213", # conflicts with D212 (multi-line-summary-first-line)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests do not need docstrings or type hints.
+"tests/*" = ["D1", "ANN"]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py", "*_tests.py"]
+testpaths = ["tests"]
+pythonpath = ["."]

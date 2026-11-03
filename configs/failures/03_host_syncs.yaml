@@ -1,0 +1,10 @@
+# Card 3: the CPU waits for the GPU every step, so it can never queue work ahead.
+# Reproduces: float(loss), a NumPy metric and an isfinite check each step, and a progress
+# bar that turns the logged loss into a Python number at every step.
+# Fix: torchmetrics on the GPU, logged on_epoch; refresh the progress bar rarely.
+antipatterns:
+  item_every_step: true
+  cpu_metric_every_step: true
+  check_finite_every_step: true
+logging:
+  progress_every: 1
