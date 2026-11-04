@@ -17,9 +17,9 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint, TQ
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
-from dl1.config import build_config, print_config
-from dl1.data import CIFAR10DataModule
-from dl1.module import Classifier
+from config import build_config, print_config
+from data import CIFAR10DataModule
+from module import Classifier
 
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:

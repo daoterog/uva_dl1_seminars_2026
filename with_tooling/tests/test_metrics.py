@@ -1,7 +1,7 @@
 import torch
 from torchmetrics.classification import MulticlassAccuracy, MulticlassCalibrationError
 
-from dl1.metrics import ExpectedCalibrationError, PerClassAccuracy
+from metrics import ExpectedCalibrationError, PerClassAccuracy
 
 N_CLASSES = 10
 

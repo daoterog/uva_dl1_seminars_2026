@@ -224,5 +224,6 @@ data/
 wandb/
 checkpoints/
 lightning_logs/
+outputs/
 slurm-*.out
 logs/

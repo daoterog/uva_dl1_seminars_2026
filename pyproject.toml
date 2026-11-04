@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.14"
 # dependency groups below, because the wheel index differs per machine.
 dependencies = [
     "lightning>=2.6.6",
+    "matplotlib>=3.11.2",
     "omegaconf>=2.4.0",
     "torchmetrics>=1.9.0",
     "wandb>=0.31.0",
@@ -28,6 +29,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.4.0",
     "pytest>=8",
     "ruff>=0.15.22",
 ]
@@ -80,6 +82,8 @@ torchvision = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Each folder is run as a script directory, so its modules import each other by bare name.
+src = ["with_tooling"]
 
 [tool.ruff.lint]
 # E/W pycodestyle, F pyflakes, I import order, UP modern syntax, B likely bugs,
@@ -95,9 +99,9 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 # Tests do not need docstrings or type hints.
-"tests/*" = ["D1", "ANN"]
+"**/tests/*" = ["D1", "ANN"]
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "*_tests.py"]
-testpaths = ["tests"]
-pythonpath = ["."]
+testpaths = ["with_tooling/tests"]
+pythonpath = ["with_tooling"]

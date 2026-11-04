@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from omegaconf.errors import ConfigKeyError
 
-from dl1.config import CONFIG_DIR, build_config, detect_where
+from config import CONFIG_DIR, build_config, detect_where
 
 WHERES = sorted(p.stem for p in (CONFIG_DIR / "where").glob("*.yaml"))
 

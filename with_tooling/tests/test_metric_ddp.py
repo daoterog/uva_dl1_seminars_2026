@@ -12,7 +12,7 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-from dl1.metrics import ExpectedCalibrationError, PerClassAccuracy
+from metrics import ExpectedCalibrationError, PerClassAccuracy
 
 N_CLASSES = 10
 SHARDS = (37, 63)

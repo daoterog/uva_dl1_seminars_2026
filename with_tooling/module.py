@@ -8,8 +8,8 @@ from torch import nn
 from torchmetrics import MeanMetric
 from torchmetrics.classification import MulticlassAccuracy
 
-from dl1.metrics import ExpectedCalibrationError, PerClassAccuracy
-from dl1.models import build_model
+from metrics import ExpectedCalibrationError, PerClassAccuracy
+from models import build_model
 
 CLASSES = ("plane", "car", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck")
 
