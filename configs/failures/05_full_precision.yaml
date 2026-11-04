@@ -1,6 +1,0 @@
-# Card 5: every matmul and convolution in fp32 on a GPU built for bf16 and TF32.
-# Reproduces: 32-true with TF32 off. Compare against your where/ profile's bf16-mixed.
-# Fix: `train.precision=bf16-mixed`, then measure `train.matmul_precision=high` on top.
-train:
-  precision: 32-true
-  matmul_precision: highest

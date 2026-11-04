@@ -4,14 +4,12 @@
 # automatically inside a gpu_mig job.
 #
 # Check the cores and memory a slice actually gets with `scontrol show partition gpu_mig`
-# before trusting the numbers below, and keep jobs/train_mig.sh in line with them.
+# before trusting the numbers below, and keep your job script in line with them.
 data:
   # Cores per slice minus one for the main process. Assumed 9 cores per slice; set it to
   # what `--cpus-per-task` gives you (Lightning warns when workers exceed the cores).
   num_workers: 8
   eval_num_workers: 2
-  # One ready batch per worker is enough to keep up; every extra one costs host RAM.
-  prefetch_factor: 1
   # Under no_grad there are no activations to keep. Make sure it fits the slice, not a
   # whole A100: a profile written for 40 GB will OOM on 20.
   eval_batch_size: 1024

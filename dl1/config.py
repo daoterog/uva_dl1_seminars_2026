@@ -6,8 +6,7 @@ Merge order, each layer overriding the one before:
 
 `base.yaml` says *what* is trained. A `where/` profile says how to keep one kind of
 machine busy (workers, precision, compile, batch for that GPU). Overlays are experiments
-on top (configs/failures/ are overlays), and `key=value` from the command line wins over
-everything.
+on top, and `key=value` from the command line wins over everything.
 
 The base is put in struct mode before anything is merged into it, so a layer or an
 override that names a key base.yaml does not have is an error rather than a silently

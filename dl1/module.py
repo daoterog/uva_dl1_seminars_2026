@@ -1,10 +1,8 @@
 """The LightningModule: one model, its loss, its metrics, its optimiser."""
 
 import lightning as L
-import numpy as np
 import torch
 import torch.nn.functional as F
-from lightning.fabric.utilities.throughput import measure_flops
 from omegaconf import DictConfig, OmegaConf
 from torch import nn
 from torchmetrics import MeanMetric
@@ -54,20 +52,6 @@ class Classifier(L.LightningModule):
                 for split in ("val", "test")
             }
         )
-        # Read by Lightning's ThroughputMonitor to report model FLOP utilisation (MFU).
-        self.flops_per_batch = self._count_flops(cfg)
-
-    @staticmethod
-    def _count_flops(cfg: DictConfig) -> int:
-        """FLOPs of one training step (forward + backward) at the training batch size.
-
-        Counted on a fresh, uncompiled copy on the meta device: no memory, no compute,
-        and inductor's fused kernels would be invisible to the counter.
-        """
-        with torch.device("meta"):
-            net = build_model(cfg.model)
-            x = torch.empty(cfg.data.batch_size, 3, 32, 32)
-        return measure_flops(net, lambda: net(x), loss_fn=torch.Tensor.sum)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """(B, 3, 32, 32) images -> (B, num_classes) logits."""
@@ -83,19 +67,7 @@ class Classifier(L.LightningModule):
         # at the price of an all-reduce on every step; the validation metrics are global.
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, batch_size=len(y))
         self.log("train/acc", self.train_acc, on_step=False, on_epoch=True)
-        self._antipatterns(loss, logits, y)
         return loss
-
-    def _antipatterns(self, loss: torch.Tensor, logits: torch.Tensor, y: torch.Tensor) -> None:
-        """The per-step host syncs of configs/failures/03_host_syncs.yaml. Off by default."""
-        ap = self.cfg.antipatterns
-        if ap.item_every_step:
-            self.last_loss = float(loss)
-        if ap.cpu_metric_every_step:
-            predictions = logits.argmax(dim=-1).cpu().numpy()
-            self.last_acc = float(np.mean(predictions == y.cpu().numpy()))
-        if ap.check_finite_every_step and not torch.isfinite(loss):
-            raise FloatingPointError(f"non-finite loss at step {self.global_step}")
 
     def _eval_step(self, batch: tuple[torch.Tensor, torch.Tensor], split: str) -> None:
         x, y = batch

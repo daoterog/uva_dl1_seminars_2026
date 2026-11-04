@@ -1,8 +1,0 @@
-# Card 1: the CPU cannot decode and augment images as fast as the GPU trains on them.
-# Reproduces: PIL transforms in the main process (no workers).
-# Fix: workers = cores - 1 (configs/where/), or `data.pipeline=gpu` to skip the CPU.
-data:
-  pipeline: classic
-  num_workers: 0
-  eval_num_workers: 0
-  persistent_workers: false

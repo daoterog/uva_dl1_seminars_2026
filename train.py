@@ -2,7 +2,7 @@
 
 python train.py                                   # profile picked from the machine
 python train.py --where snellius_mig              # or named explicitly
-python train.py --overlay configs/failures/01_cpu_bound_loader.yaml
+python train.py --overlay my_experiment.yaml
 python train.py data.batch_size=256 train.max_epochs=5
 python train.py --print-config                    # show the config and exit
 """
@@ -13,16 +13,10 @@ import subprocess
 
 import lightning as L
 import torch
-from lightning.pytorch.callbacks import (
-    LearningRateMonitor,
-    ModelCheckpoint,
-    ThroughputMonitor,
-    TQDMProgressBar,
-)
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint, TQDMProgressBar
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
-from dl1.callbacks import DataWaitMonitor, Heartbeat, StopAtStep
 from dl1.config import build_config, print_config
 from dl1.data import CIFAR10DataModule
 from dl1.module import Classifier
@@ -65,12 +59,7 @@ def build_trainer(cfg: DictConfig) -> L.Trainer:
         ModelCheckpoint(dirpath=cfg.logging.checkpoint_dir, monitor="val/acc", mode="max"),
         LearningRateMonitor(logging_interval="step"),
         TQDMProgressBar(refresh_rate=cfg.logging.progress_every),
-        DataWaitMonitor(),
-        ThroughputMonitor(batch_size_fn=lambda batch: len(batch[0])),
-        Heartbeat(),
     ]
-    if cfg.train.max_steps is not None:
-        callbacks.append(StopAtStep(cfg.train.max_steps))
     return L.Trainer(
         accelerator="auto",
         devices="auto",

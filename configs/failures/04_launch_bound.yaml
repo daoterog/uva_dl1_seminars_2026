@@ -1,9 +1,0 @@
-# Card 4: each step is so little work that launching kernels costs more than running them.
-# Reproduces: a small MLP at batch 32, fed from the GPU so the loader is not the limit.
-# Fix: a batch-size ladder (bench.py --ladder), torch.compile (mode reduce-overhead uses
-# CUDA graphs), packing two runs onto one GPU, or a smaller GPU (a MIG slice).
-data:
-  pipeline: gpu
-  batch_size: 32
-model:
-  name: mlp
