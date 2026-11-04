@@ -14,7 +14,6 @@ data:
 train:
   precision: bf16-mixed
 logging:
-  # Compute nodes have no internet. `wandb sync` the run from a login node afterwards.
-  offline: true
-  # Home is small; run files and checkpoints go to scratch.
-  save_dir: ${oc.env:TMPDIR,/tmp}
+  # Home is small: the wandb run files and the checkpoints go to shared scratch. (Not $TMPDIR,
+  # which is wiped when the job ends.)
+  save_dir: /scratch-shared/${oc.env:USER}/outputs

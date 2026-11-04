@@ -39,10 +39,18 @@ python train.py optim.lr=0.05 train.max_epochs=5 # override any setting with key
 python train.py --overlay my_experiment.yaml     # an experiment layered on top
 ```
 
-On Snellius, train inside a SLURM job, never on a login node. The data goes to
-`/scratch-shared/$USER/data`, created on the first run. Compute nodes have no internet,
-so wandb logs offline there. Upload the run afterwards from a login node with `wandb sync
-<run directory>`.
+## On Snellius
+
+Train inside a SLURM job, never on a login node. From the root of the repository:
+
+```bash
+sbatch jobs/install_env.sh        # once: builds the conda environment uvadlc_seminars
+module load 2025 Anaconda3/2025.06-1 && source activate uvadlc_seminars && wandb login  # once
+sbatch jobs/train.sh              # then, as often as you like, with any key=value overrides
+```
+
+The first job downloads CIFAR-10 into `/scratch-shared/$USER/data`. Runs and checkpoints go
+to `/scratch-shared/$USER/outputs`, because home is small.
 
 ## What is where
 

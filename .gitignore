@@ -226,4 +226,5 @@ checkpoints/
 lightning_logs/
 outputs/
 slurm-*.out
+slurm_output_*.out
 logs/

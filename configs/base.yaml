@@ -71,7 +71,7 @@ logging:
   # Runs that belong together, e.g. one sweep.
   group: null
   tags: []
-  # true: write locally, upload later with `wandb sync`. Compute nodes have no internet.
+  # true: write locally, upload later with `wandb sync`. For machines without internet.
   offline: false
   # Where wandb writes the run, and Lightning its checkpoints (one directory per run).
   save_dir: outputs/
