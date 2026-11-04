@@ -53,7 +53,7 @@ configs/
   where/                      per-machine settings: local, snellius_mig, snellius_a100
 src/
   data.py                     the CIFAR-10 LightningDataModule
-  models.py                   the model
+  models.py                   the models: SmallCNN (default), ResNet-18, MLP
   pl_module.py                the LightningModule: loss, metrics, logging, optimiser
   metrics.py                  a custom torchmetrics metric, correct across GPUs
   config.py                   loads and merges the config layers (OmegaConf)

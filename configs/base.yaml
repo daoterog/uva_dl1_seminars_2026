@@ -19,10 +19,14 @@ data:
   drop_last: true
 
 model:
-  # resnet18: CIFAR-style ResNet-18 (3x3 stem, no max-pool), ~11M parameters.
-  # mlp:      a small MLP, too little work per step to keep any GPU busy.
-  name: resnet18
+  # small_cnn: the CNN from notebooks/prototyping.ipynb, ~1.2M parameters at width 64.
+  # resnet18:  CIFAR-style ResNet-18 (3x3 stem, no max-pool), ~11M parameters.
+  # mlp:       a small MLP, too little work per step to keep any GPU busy.
+  name: small_cnn
   num_classes: 10
+  # small_cnn: channels of the first block (doubled by each block after it).
+  width: 64
+  # mlp: sizes of the hidden layers.
   mlp_hidden: [512, 512]
 
 optim:
