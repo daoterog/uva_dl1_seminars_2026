@@ -1,4 +1,6 @@
-"""CIFAR-10 as a LightningDataModule: a train/val split of the training set, and the test set."""
+"""CIFAR-10 as a LightningDataModule: the data cells of notebooks/prototyping.ipynb, in hooks."""
+
+from pathlib import Path
 
 import lightning as L
 import torch
@@ -9,77 +11,72 @@ from torchvision.datasets import CIFAR10
 
 MEAN = (0.4914, 0.4822, 0.4465)
 STD = (0.2470, 0.2435, 0.2616)
-N_TRAIN = 50_000
 
 
 def cifar_transforms(augment: bool) -> transforms.Compose:
     """Random crop and flip when augmenting, then normalise."""
-    steps = [transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip()]
-    return transforms.Compose(
-        [*(steps if augment else []), transforms.ToTensor(), transforms.Normalize(MEAN, STD)]
-    )
+    steps = []
+    if augment:
+        steps += [transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip()]
+    steps += [transforms.ToTensor(), transforms.Normalize(MEAN, STD)]
+    return transforms.Compose(steps)
 
 
 class CIFAR10DataModule(L.LightningDataModule):
-    """Train/val split of the CIFAR-10 training set, and the test set."""
+    """A train/val split of the CIFAR-10 training set, and the test set."""
 
     def __init__(self, cfg: DictConfig, seed: int = 0) -> None:
-        """Keep the `data` section of the config and the split seed."""
+        """Keep the `data` section of the config, and the seed of the train/val split."""
         super().__init__()
         self.cfg = cfg
         self.seed = seed
 
-    @property
-    def eval_batch_size(self) -> int:
-        """Batch size for validation and test."""
-        return self.cfg.eval_batch_size or self.cfg.batch_size
-
     def prepare_data(self) -> None:
-        """Download CIFAR-10 once (Lightning calls this on one process only)."""
+        """Download CIFAR-10. Lightning calls this once, on a single process."""
+        Path(self.cfg.root).mkdir(parents=True, exist_ok=True)
         CIFAR10(self.cfg.root, train=True, download=True)
         CIFAR10(self.cfg.root, train=False, download=True)
 
-    def setup(self, stage: str | None = None) -> None:
-        """Split the training set into train and val with a fixed seed, and load the test set."""
-        perm = torch.randperm(N_TRAIN, generator=torch.Generator().manual_seed(self.seed))
-        val_idx, train_idx = perm[: self.cfg.val_size], perm[self.cfg.val_size :]
-
-        train_tf, eval_tf = cifar_transforms(self.cfg.augment), cifar_transforms(False)
-        # Two views of the same files: train with augmentation, val without.
-        self.train_set = Subset(
-            CIFAR10(self.cfg.root, train=True, transform=train_tf), train_idx.tolist()
-        )
-        self.val_set = Subset(
-            CIFAR10(self.cfg.root, train=True, transform=eval_tf), val_idx.tolist()
-        )
+    def setup(self, stage: str) -> None:
+        """Build the datasets and the split. Lightning calls this on every process."""
+        # ##########################################################################################
+        # NOTE: evaluation never augments, unless it is deliberate.
+        #
+        # Validation and test must be deterministic: the same model has to get the same score
+        # every time, or comparing runs and picking the best checkpoint mean nothing. If you do
+        # want a stochastic evaluation (test-time augmentation, say), make it intentional and
+        # controlled: its own setting, a fixed seed, and reported as such.
+        # ##########################################################################################
+        train_tf, eval_tf = cifar_transforms(self.cfg.augment), cifar_transforms(augment=False)
+        train_full = CIFAR10(self.cfg.root, train=True, transform=train_tf)
+        val_full = CIFAR10(self.cfg.root, train=True, transform=eval_tf)
         self.test_set = CIFAR10(self.cfg.root, train=False, transform=eval_tf)
 
-    def _loader(
-        self, dataset: Dataset, batch_size: int, num_workers: int, **kwargs: object
-    ) -> DataLoader:
+        # A fixed split, so every run validates on the same images.
+        generator = torch.Generator().manual_seed(self.seed)
+        perm = torch.randperm(len(train_full), generator=generator)
+        self.train_set = Subset(train_full, perm[self.cfg.val_size :].tolist())
+        self.val_set = Subset(val_full, perm[: self.cfg.val_size].tolist())
+
+    def _loader(self, dataset: Dataset, shuffle: bool) -> DataLoader:
+        """Batches of `batch_size`, loaded by `num_workers` worker processes."""
         return DataLoader(
             dataset,
-            batch_size=batch_size,
-            num_workers=num_workers,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=num_workers > 0,
-            **kwargs,
+            batch_size=self.cfg.batch_size,
+            shuffle=shuffle,
+            num_workers=self.cfg.num_workers,
+            pin_memory=torch.cuda.is_available(),
+            persistent_workers=self.cfg.num_workers > 0,
         )
 
     def train_dataloader(self) -> DataLoader:
         """Shuffled training batches."""
-        return self._loader(
-            self.train_set,
-            self.cfg.batch_size,
-            self.cfg.num_workers,
-            shuffle=True,
-            drop_last=self.cfg.drop_last,
-        )
+        return self._loader(self.train_set, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
-        """Validation batches, in a fixed order, at the evaluation batch size."""
-        return self._loader(self.val_set, self.eval_batch_size, self.cfg.eval_num_workers)
+        """Validation batches, in a fixed order."""
+        return self._loader(self.val_set, shuffle=False)
 
     def test_dataloader(self) -> DataLoader:
-        """Test batches, in a fixed order, at the evaluation batch size."""
-        return self._loader(self.test_set, self.eval_batch_size, self.cfg.eval_num_workers)
+        """Test batches, in a fixed order."""
+        return self._loader(self.test_set, shuffle=False)

@@ -1,14 +1,9 @@
-# Where: your own machine (a laptop CPU, or a laptop GPU with a few GB). Picked by
-# `--where local`, or automatically outside a SLURM job. Layered over base.yaml.
+# Where: your own machine (a laptop CPU, a laptop GPU, or a Mac). Picked by `--where local`,
+# or automatically outside a SLURM job. Layered over base.yaml.
 data:
   # Leave one core for the main process. Check yours with `nproc`.
   num_workers: 4
 train:
-  # Compile warmup (tens of seconds) is rarely earned back on a short local run.
-  compile: false
-  # bf16 needs an Ampere or newer GPU (RTX 30xx and later). On a CPU, or an older GPU,
-  # use 32-true; on a T4 or similar, 16-mixed.
+  # Works everywhere. On an NVIDIA GPU from the RTX 30xx on, pass train.precision=bf16-mixed
+  # for about twice the speed.
   precision: 32-true
-logging:
-  # Short local runs are debugging: no need to send them anywhere.
-  wandb_mode: offline

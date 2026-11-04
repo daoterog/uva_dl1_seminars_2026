@@ -39,7 +39,8 @@ python train.py optim.lr=0.05 train.max_epochs=5 # override any setting with key
 python train.py --overlay my_experiment.yaml     # an experiment layered on top
 ```
 
-On Snellius, train inside a SLURM job, never on a login node. Compute nodes have no internet,
+On Snellius, train inside a SLURM job, never on a login node. The data goes to
+`/scratch-shared/$USER/data`, created on the first run. Compute nodes have no internet,
 so wandb logs offline there. Upload the run afterwards from a login node with `wandb sync
 <run directory>`.
 

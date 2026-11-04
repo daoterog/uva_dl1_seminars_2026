@@ -1,4 +1,4 @@
-"""The LightningModule: one model, its loss, its metrics, its optimiser."""
+"""The LightningModule: the training cells of notebooks/prototyping.ipynb, in hooks."""
 
 import lightning as L
 import torch
@@ -30,13 +30,11 @@ class Classifier(L.LightningModule):
         self.save_hyperparameters({"cfg": OmegaConf.to_container(cfg, resolve=True)})
         self.cfg = cfg
         self.net = build_model(cfg.model)
-        if cfg.train.compile:
-            # In place: the module stays the same object, so state_dict keys are unchanged
-            # (torch.compile(model) would return a wrapper whose keys start `_orig_mod.`).
-            self.net.compile(mode=cfg.train.compile_mode)
 
         n = cfg.model.num_classes
-        self.train_acc = MulticlassAccuracy(num_classes=n)
+        # "micro": correct over total, as in the notebook. The default, "macro", is the mean
+        # of the per-class accuracies: a different number.
+        self.train_acc = MulticlassAccuracy(num_classes=n, average="micro")
         # One collection per evaluation split: the same metric object must never be
         # updated by two splits, or each would report the other's samples too.
         self.eval_metrics = nn.ModuleDict(
@@ -44,7 +42,7 @@ class Classifier(L.LightningModule):
                 split: nn.ModuleDict(
                     {
                         "loss": MeanMetric(),
-                        "acc": MulticlassAccuracy(num_classes=n),
+                        "acc": MulticlassAccuracy(num_classes=n, average="micro"),
                         "per_class": PerClassAccuracy(num_classes=n),
                     }
                 )
@@ -57,10 +55,10 @@ class Classifier(L.LightningModule):
         return self.net(x)
 
     def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], _idx: int) -> torch.Tensor:
-        """Cross-entropy on one batch; metrics updated on the GPU, logged per epoch."""
+        """The forward pass and the loss. Lightning does the backward pass and the step."""
         x, y = batch
-        logits = self(x)
-        loss = F.cross_entropy(logits, y, label_smoothing=self.cfg.optim.label_smoothing)
+        logits = self.forward(x)
+        loss = F.cross_entropy(logits, y)
         self.train_acc.update(logits, y)
         # Under DDP this is each process's own loss. sync_dist=True would make it global,
         # at the price of an all-reduce on every step; the validation metrics are global.
@@ -73,7 +71,7 @@ class Classifier(L.LightningModule):
         logits = self(x)
         metrics = self.eval_metrics[split]
         # Weighted by the batch size, so a short last batch counts for what it holds.
-        metrics["loss"].update(F.cross_entropy(logits, y), weight=len(y))
+        metrics["loss"].update(F.cross_entropy(logits.float(), y), weight=len(y))
         for name in ("acc", "per_class"):
             metrics[name].update(logits, y)
 
@@ -113,8 +111,9 @@ class Classifier(L.LightningModule):
             lr=o.lr,
             momentum=o.momentum,
             weight_decay=o.weight_decay,
-            nesterov=o.nesterov,
+            nesterov=True,
         )
+        # The total number of steps: max_epochs x batches per epoch, worked out by Lightning.
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer, max_lr=o.lr, total_steps=self.trainer.estimated_stepping_batches
         )
