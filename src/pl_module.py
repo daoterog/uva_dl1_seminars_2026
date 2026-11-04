@@ -8,7 +8,7 @@ from torch import nn
 from torchmetrics import MeanMetric
 from torchmetrics.classification import MulticlassAccuracy
 
-from src.metrics import ExpectedCalibrationError, PerClassAccuracy
+from src.metrics import PerClassAccuracy
 from src.models import build_model
 
 CLASSES = ("plane", "car", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck")
@@ -45,7 +45,6 @@ class Classifier(L.LightningModule):
                     {
                         "loss": MeanMetric(),
                         "acc": MulticlassAccuracy(num_classes=n),
-                        "ece": ExpectedCalibrationError(num_bins=cfg.metrics.ece_bins),
                         "per_class": PerClassAccuracy(num_classes=n),
                     }
                 )
@@ -75,14 +74,14 @@ class Classifier(L.LightningModule):
         metrics = self.eval_metrics[split]
         # Weighted by the batch size, so a short last batch counts for what it holds.
         metrics["loss"].update(F.cross_entropy(logits, y), weight=len(y))
-        for name in ("acc", "ece", "per_class"):
+        for name in ("acc", "per_class"):
             metrics[name].update(logits, y)
 
     def _log_eval_epoch(self, split: str) -> None:
         """Compute (which syncs across processes), log, and reset one split's metrics."""
         metrics = self.eval_metrics[split]
         self.log_dict(
-            {f"{split}/{name}": metrics[name].compute() for name in ("loss", "acc", "ece")},
+            {f"{split}/{name}": metrics[name].compute() for name in ("loss", "acc")},
             prog_bar=split == "val",
         )
         per_class = metrics["per_class"].compute()

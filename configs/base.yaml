@@ -1,7 +1,7 @@
 # What is trained: data, model, optimisation. Machine-dependent settings (workers,
 # precision, compile, batch size for a given GPU) belong to configs/where/, and are
 # set there rather than here, so that a cluster run never silently inherits a laptop
-# value. See seminar_1_tooling/README.md for the merge order.
+# value. See src/config.py for the merge order.
 seed: 0
 
 data:
@@ -46,10 +46,6 @@ train:
   # null | simple | advanced | pytorch. `simple` prints time per Lightning hook at the end.
   # Profilers slow the run: use them on a short one.
   profiler: null
-
-metrics:
-  # Calibration bins for the expected calibration error at validation.
-  ece_bins: 15
 
 logging:
   project: dl1-seminars
