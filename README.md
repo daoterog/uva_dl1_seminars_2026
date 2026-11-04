@@ -20,14 +20,12 @@ and pinned in `uv.lock`:
 ```bash
 uv sync                               # CUDA build of PyTorch (Snellius, NVIDIA laptops)
 uv sync --no-group cuda --group cpu   # CPU-only build (no NVIDIA GPU)
-uv run pytest                         # the tests, including a 2-process DDP test on CPU
 ```
 
 The same caveats as in assignment 1 apply. A bare `uv run` after a CPU sync reinstalls
 the CUDA build, so either repeat the flags or use `uv run --no-sync`. A CPU build on a
 GPU machine does not raise an error, it just trains on the CPU. `train.py` prints the
-device it found as its first line, and the Snellius job scripts refuse to start without
-a GPU.
+device it found as its first line.
 
 The first run downloads CIFAR-10 (170 MB) into `data/`.
 
@@ -40,27 +38,29 @@ python train.py data.batch_size=256 train.max_epochs=5
 python train.py --overlay my_experiment.yaml   # an experiment layered on top
 ```
 
-On Snellius, run inside a SLURM job, never on a login node. Compute nodes have no internet, so wandb runs offline there. Afterwards, upload the run
-from a login node with `wandb sync <the directory the job printed>`.
+On Snellius, run inside a SLURM job, never on a login node. Compute nodes have no
+internet, so wandb runs offline there. Afterwards, upload the run from a login node with
+`wandb sync <the directory the job printed>`.
 
 ## What is where
 
 ```
+notebooks/
+  prototyping.ipynb      the same project in plain PyTorch: where every project starts
 train.py                 entry point: config -> data + model -> Lightning Trainer
 configs/
   base.yaml              what is trained (data, model, optimiser)
   where/                 how to keep each machine busy: local, snellius_mig, snellius_a100
-dl1/
+src/
   config.py              layered config loading (OmegaConf), with typo-proof struct mode
   data.py                the CIFAR-10 LightningDataModule
   models.py              CIFAR ResNet-18 and a small MLP
   metrics.py             two custom torchmetrics metrics, correct under DDP
-  module.py              the LightningModule: loss, metrics, logging, optimiser
-tests/                   config merging, metrics against torchmetrics, metrics under DDP
+  pl_module.py           the LightningModule: loss, metrics, logging, optimiser
 ```
 
-To reuse this for your own project, `dl1/config.py` carries over unchanged and
-`dl1/metrics.py` is the template for your own metrics. The data module and the model are
+To reuse this for your own project, `src/config.py` carries over unchanged and
+`src/metrics.py` is the template for your own metrics. The data module and the model are
 the parts you replace.
 
 ## Code style

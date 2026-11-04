@@ -1,6 +1,7 @@
 # Seminar 1: the tooling
 
 The training loop you wrote in assignment 1 does five jobs at once:
+
 - it holds the hyperparameters;
 - it moves data to the device;
 - it runs the optimisation;

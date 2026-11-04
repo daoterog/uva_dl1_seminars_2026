@@ -30,7 +30,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ipykernel>=7.4.0",
-    "pytest>=8",
     "ruff>=0.15.22",
 ]
 cuda = [
@@ -82,8 +81,6 @@ torchvision = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-# Each folder is run as a script directory, so its modules import each other by bare name.
-src = ["with_tooling"]
 
 [tool.ruff.lint]
 # E/W pycodestyle, F pyflakes, I import order, UP modern syntax, B likely bugs,
@@ -96,12 +93,3 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
-[tool.ruff.lint.per-file-ignores]
-# Tests do not need docstrings or type hints.
-"**/tests/*" = ["D1", "ANN"]
-
-[tool.pytest.ini_options]
-python_files = ["test_*.py", "*_tests.py"]
-testpaths = ["with_tooling/tests"]
-pythonpath = ["with_tooling"]

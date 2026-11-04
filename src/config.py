@@ -19,7 +19,7 @@ from pathlib import Path
 
 from omegaconf import DictConfig, OmegaConf, open_dict
 
-CONFIG_DIR = Path(__file__).resolve().parent / "configs"
+CONFIG_DIR = Path(__file__).resolve().parent.parent / "configs"
 
 # SLURM partition -> configs/where/ profile, so a job never runs with the laptop profile.
 WHERE_BY_PARTITION = {
