@@ -2,11 +2,10 @@
 
 Merge order, each layer overriding the one before:
 
-    configs/base.yaml  ->  configs/where/<where>.yaml  ->  overlays, in order  ->  key=value
-
-`base.yaml` says *what* is trained. A `where/` profile says how to keep one kind of
-machine busy (workers, precision, compile, batch for that GPU). Overlays are experiments
-on top, and `key=value` from the command line wins over everything.
+    configs/base.yaml           what is trained
+    configs/where/<where>.yaml  how this machine runs it (workers, precision, paths)
+    --overlay <file.yaml>       an experiment on top, e.g. configs/experiments/resnet18.yaml
+    key=value                   the command line, which wins over everything
 
 The base is put in struct mode before anything is merged into it, so a layer or an
 override that names a key base.yaml does not have is an error rather than a silently
@@ -47,18 +46,27 @@ def detect_where() -> str:
     return WHERE_BY_PARTITION[partition]
 
 
+def named_layer(config_dir: Path, kind: str, name: str) -> Path:
+    """The file `configs/<kind>/<name>.yaml`, or an error listing the names that exist."""
+    path = config_dir / kind / f"{name}.yaml"
+    if not path.exists():
+        known = sorted(p.stem for p in (config_dir / kind).glob("*.yaml"))
+        raise FileNotFoundError(f"no configs/{kind}/{name}.yaml (known: {known})")
+    return path
+
+
 def build_config(
     where: str | None = None,
     overlays: Sequence[str | Path] = (),
     overrides: Sequence[str] = (),
     config_dir: Path = CONFIG_DIR,
 ) -> DictConfig:
-    """Merge base, profile, overlays and dotlist overrides into one resolved config.
+    """Merge every layer into one resolved config.
 
     Args:
         where: Name of a file in `configs/where/`, without `.yaml`. Detected when None.
-        overlays: Paths of further YAML files, merged in order.
-        overrides: Dotlist overrides such as `data.batch_size=256`.
+        overlays: Paths of YAML files merged on top, in order.
+        overrides: Dotlist overrides such as `data.batch_size=256`, merged last.
         config_dir: Directory holding `base.yaml` and `where/`.
 
     Returns:
@@ -67,12 +75,14 @@ def build_config(
 
     """
     where = where or detect_where()
+    layers = [named_layer(config_dir, "where", where), *map(Path, overlays)]
+
     cfg = OmegaConf.load(config_dir / "base.yaml")
-    OmegaConf.set_struct(cfg, True)
-    layers = [config_dir / "where" / f"{where}.yaml", *map(Path, overlays)]
+    OmegaConf.set_struct(cfg, True)  # from here on, an unknown key is an error
     for layer in layers:
-        cfg = OmegaConf.merge(cfg, OmegaConf.load(layer))
-    cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(list(overrides)))
+        cfg = OmegaConf.merge(cfg, OmegaConf.load(layer))  # the later layer wins
+    cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(list(overrides)))  # the CLI goes last
+
     with open_dict(cfg):
         cfg.profile = {"where": where, "overlays": [str(p) for p in overlays]}
     OmegaConf.resolve(cfg)

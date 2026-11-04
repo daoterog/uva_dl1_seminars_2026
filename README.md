@@ -36,7 +36,7 @@ Run everything from the root of the repository:
 python train.py --print-config                   # the merged config, without training
 python train.py                                  # train, with the settings for this machine
 python train.py optim.lr=0.05 train.max_epochs=5 # override any setting with key=value
-python train.py --overlay my_experiment.yaml     # an experiment layered on top
+python train.py --overlay configs/experiments/resnet18.yaml  # an experiment on top
 ```
 
 ## On Snellius
@@ -60,6 +60,7 @@ train.py                      entry point: config -> data + model -> Lightning T
 configs/
   base.yaml                   what is trained: data, model, optimiser
   where/                      per-machine settings: local, snellius_mig, snellius_a100
+  experiments/                one question each, as overlays: debug, wide_cnn, resnet18, ...
 src/
   data.py                     the CIFAR-10 LightningDataModule
   models.py                   the models: SmallCNN (default), ResNet-18, MLP

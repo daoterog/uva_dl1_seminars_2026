@@ -1,0 +1,4 @@
+# A different model: CIFAR ResNet-18, ~11M parameters (SmallCNN has ~1.2M).
+#   python train.py --overlay configs/experiments/resnet18.yaml
+model:
+  name: resnet18

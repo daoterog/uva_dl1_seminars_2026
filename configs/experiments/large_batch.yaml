@@ -1,0 +1,7 @@
+# Optimisation: a bigger batch, with the learning rate scaled with it (the linear scaling
+# rule: 4x the batch, 4x the LR). Two keys that belong together, so they live in one file.
+#   python train.py --overlay configs/experiments/large_batch.yaml
+data:
+  batch_size: 512
+optim:
+  lr: 0.4

@@ -1,0 +1,6 @@
+# Before a long run: does it train at all? One epoch, tagged so it is easy to filter out.
+#   python train.py --overlay configs/experiments/debug.yaml
+train:
+  max_epochs: 1
+logging:
+  tags: [debug]

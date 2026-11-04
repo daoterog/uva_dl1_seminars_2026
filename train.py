@@ -2,8 +2,8 @@
 
 python train.py                                   # profile picked from the machine
 python train.py --where snellius_mig              # or named explicitly
-python train.py --overlay my_experiment.yaml
-python train.py optim.lr=0.05 train.max_epochs=5
+python train.py --overlay configs/experiments/resnet18.yaml   # an experiment on top
+python train.py optim.lr=0.05 train.max_epochs=5  # any key=value, which wins over all
 python train.py --print-config                    # show the config and exit
 """
 
@@ -27,7 +27,10 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     )
     parser.add_argument("--where", help="a configs/where/ profile (default: detected)")
     parser.add_argument(
-        "--overlay", action="append", default=[], help="extra YAML, merged in order"
+        "--overlay",
+        action="append",
+        default=[],
+        help="a YAML file merged on top, e.g. configs/experiments/debug.yaml; repeatable",
     )
     parser.add_argument("--print-config", action="store_true", help="print the config and exit")
     parser.add_argument("--no-test", action="store_true", help="skip the test-set evaluation")
