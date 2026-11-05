@@ -2,15 +2,36 @@
 
 from pathlib import Path
 
+import datasets
 import lightning as L
 import torch
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
-from torchvision.datasets import CIFAR10
 
+# CIFAR-10 on the Hugging Face Hub: a train split of 50,000 images and a test split of 10,000,
+# each row an `img` (a 32x32 RGB PIL image) and a `label` (0-9).
+HF_DATASET = "uoft-cs/cifar10"
 MEAN = (0.4914, 0.4822, 0.4465)
 STD = (0.2470, 0.2435, 0.2616)
+
+
+class HFImageDataset(Dataset):
+    """A Hugging Face split as a PyTorch Dataset of (transformed image, label) pairs."""
+
+    def __init__(self, split: datasets.Dataset, transform: transforms.Compose) -> None:
+        """Keep the split and the transform to apply to each image."""
+        self.split = split
+        self.transform = transform
+
+    def __len__(self) -> int:
+        """Number of images in the split."""
+        return len(self.split)
+
+    def __getitem__(self, i: int) -> tuple[torch.Tensor, int]:
+        """Image `i`, transformed, and its label."""
+        row = self.split[i]
+        return self.transform(row["img"]), row["label"]
 
 
 def cifar_transforms(augment: bool) -> transforms.Compose:
@@ -34,8 +55,9 @@ class CIFAR10DataModule(L.LightningDataModule):
     def prepare_data(self) -> None:
         """Download CIFAR-10. Lightning calls this once, on a single process."""
         Path(self.cfg.root).mkdir(parents=True, exist_ok=True)
-        CIFAR10(self.cfg.root, train=True, download=True)
-        CIFAR10(self.cfg.root, train=False, download=True)
+        # cache_dir: by default the Hub caches in your home directory, which is small on
+        # Snellius. A second call finds the files there and downloads nothing.
+        datasets.load_dataset(HF_DATASET, cache_dir=self.cfg.root)
 
     def setup(self, stage: str) -> None:
         """Build the datasets and the split. Lightning calls this on every process."""
@@ -48,9 +70,10 @@ class CIFAR10DataModule(L.LightningDataModule):
         # controlled: its own setting, a fixed seed, and reported as such.
         # ##########################################################################################
         train_tf, eval_tf = cifar_transforms(self.cfg.augment), cifar_transforms(augment=False)
-        train_full = CIFAR10(self.cfg.root, train=True, transform=train_tf)
-        val_full = CIFAR10(self.cfg.root, train=True, transform=eval_tf)
-        self.test_set = CIFAR10(self.cfg.root, train=False, transform=eval_tf)
+        cifar = datasets.load_dataset(HF_DATASET, cache_dir=self.cfg.root)
+        train_full = HFImageDataset(cifar["train"], train_tf)
+        val_full = HFImageDataset(cifar["train"], eval_tf)
+        self.test_set = HFImageDataset(cifar["test"], eval_tf)
 
         # A fixed split, so every run validates on the same images.
         generator = torch.Generator().manual_seed(self.seed)

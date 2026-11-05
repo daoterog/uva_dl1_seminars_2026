@@ -26,7 +26,8 @@ uv run wandb login                    # once, to log runs to your wandb account
 ```
 
 After a CPU-only sync, a bare `uv run` reinstalls the CUDA build: repeat the flags, or use
-`uv run --no-sync`. The first run downloads CIFAR-10 (170 MB) into `data/`.
+`uv run --no-sync`. The first run downloads CIFAR-10 from the Hugging Face Hub
+([`uoft-cs/cifar10`](https://huggingface.co/datasets/uoft-cs/cifar10), ~130 MB) into `data/`.
 
 ## Running
 
@@ -45,11 +46,12 @@ Train inside a SLURM job, never on a login node. From the root of the repository
 
 ```bash
 sbatch jobs/install_env.sh        # once: builds the conda environment uvadlc_seminars
+sbatch jobs/download_data.sh      # once: CIFAR-10 into /scratch-shared/$USER/data (CPU job)
 module load 2025 Anaconda3/2025.06-1 && source activate uvadlc_seminars && wandb login  # once
 sbatch jobs/train.sh              # then, as often as you like, with any key=value overrides
 ```
 
-The first job downloads CIFAR-10 into `/scratch-shared/$USER/data`. Runs and checkpoints go
+The data lives in `/scratch-shared/$USER/data`. Runs and checkpoints go
 to `/scratch-shared/$USER/outputs`, because home is small.
 
 ## What is where
