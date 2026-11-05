@@ -40,6 +40,40 @@ python train.py optim.lr=0.05 train.max_epochs=5 # override any setting with key
 python train.py --overlay configs/experiments/resnet18.yaml  # an experiment on top
 ```
 
+## Playing with the config
+
+`--print-config` builds the config and prints it without training, so each of these takes a
+second. The layers merge in order (`src/config.py`), and each one overrides the one before:
+
+```bash
+# Follow one key through the four layers.
+python train.py --print-config | grep "lr:"                               # 0.1  base.yaml
+python train.py --print-config --where snellius_mig | grep "lr:"          # 0.1  + where/: a machine
+                                                                          #      does not change what is trained
+python train.py --print-config --where snellius_mig \
+    --overlay configs/experiments/large_batch.yaml | grep "lr:"           # 0.4  + an experiment
+python train.py --print-config --where snellius_mig \
+    --overlay configs/experiments/large_batch.yaml optim.lr=0.2 | grep "lr:"  # 0.2  + the command line
+
+# Experiments stack, in order: ResNet-18, for 1 epoch, tagged debug.
+python train.py --print-config --overlay configs/experiments/resnet18.yaml \
+    --overlay configs/experiments/debug.yaml
+
+# A typo is an error, not a silently ignored key (struct mode).
+python train.py --print-config data.num_worker=8
+# ConfigKeyError: Key 'num_worker' is not in struct. Did you mean: 'num_workers'?
+
+# Interpolation: ${oc.env:USER} fills in your username on Snellius.
+python train.py --print-config --where snellius_mig | grep scratch-shared
+
+# The config records which layers built it, and wandb stores it with the run.
+python train.py --print-config --overlay configs/experiments/large_batch.yaml | grep -A3 "^profile:"
+```
+
+Struct mode catches unknown keys, not wrong values: `data.augment=flase` is accepted as the
+string `"flase"`. To ask a question of your own, write a file in `configs/experiments/` with only
+the keys it changes (`data.augment: false`, say), and pass it with `--overlay`.
+
 ## On Snellius
 
 Train inside a SLURM job, never on a login node. From the root of the repository:
