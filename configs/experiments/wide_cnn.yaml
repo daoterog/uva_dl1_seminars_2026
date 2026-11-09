@@ -1,6 +1,0 @@
-# Model configuration: is a wider network better? The same SmallCNN, twice the channels.
-#   python train.py --overlay configs/experiments/wide_cnn.yaml
-model:
-  width: 128
-logging:
-  group: width

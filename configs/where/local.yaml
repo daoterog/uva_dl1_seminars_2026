@@ -1,9 +1,0 @@
-# Where: your own machine (a laptop CPU, a laptop GPU, or a Mac). Picked by `--where local`,
-# or automatically outside a SLURM job. Layered over base.yaml.
-data:
-  # Leave one core for the main process. Check yours with `nproc`.
-  num_workers: 4
-train:
-  # Works everywhere. On an NVIDIA GPU from the RTX 30xx on, pass train.precision=bf16-mixed
-  # for about twice the speed.
-  precision: 32-true
